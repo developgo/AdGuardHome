@@ -2,6 +2,7 @@
 package dnsfilter
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -91,6 +92,11 @@ type filtersInitializerParams struct {
 	blockFilters []Filter
 }
 
+// Resolver is the interface for net.Resolver to simplify testing.
+type Resolver interface {
+	LookupIP(ctx context.Context, network, host string) (ips []net.IP, err error)
+}
+
 // DNSFilter matches hostnames and DNS requests against filtering rules.
 type DNSFilter struct {
 	rulesStorage         *filterlist.RuleStorage
@@ -110,6 +116,8 @@ type DNSFilter struct {
 	// Channel for passing data to filters-initializer goroutine
 	filtersInitializerChan chan filtersInitializerParams
 	filtersInitializerLock sync.Mutex
+
+	resolver Resolver
 }
 
 // Filter represents a filter list
@@ -805,7 +813,9 @@ func New(c *Config, blockFilters []Filter) *DNSFilter {
 		}
 	}
 
-	d := new(DNSFilter)
+	d := &DNSFilter{
+		resolver: net.DefaultResolver,
+	}
 
 	err := d.initSecurityServices()
 	if err != nil {

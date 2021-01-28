@@ -2,6 +2,7 @@ package dnsfilter
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"encoding/gob"
 	"encoding/json"
@@ -102,7 +103,7 @@ func (d *DNSFilter) checkSafeSearch(host string) (Result, error) {
 	}
 
 	// TODO this address should be resolved with upstream that was configured in dnsforward
-	ips, err := net.LookupIP(safeHost)
+	ips, err := d.resolver.LookupIP(context.Background(), "ip", safeHost)
 	if err != nil {
 		log.Tracef("SafeSearchDomain for %s was found but failed to lookup for %s cause %s", host, safeHost, err)
 		return Result{}, err
