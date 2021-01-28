@@ -239,20 +239,16 @@ func TestCheckHostSafeSearchYandex(t *testing.T) {
 type testResolver struct{}
 
 // LookupIP implements Resolver interface for *testResolver.
-func (r *testResolver) LookupIP(_ context.Context, network, host string) (ips []net.IP, err error) {
+func (r *testResolver) LookupIPAddr(_ context.Context, host string) (ips []net.IPAddr, err error) {
 	hash := sha256.Sum256([]byte(host))
-	var first, second int
-	switch network {
-	case "ip":
-		first, second = 4, 20
-	case "ip4":
-		first, second = 4, 8
-	case "ip6":
-		first, second = 16, 32
-	default:
-		return nil, nil
-	}
-	return []net.IP{net.IP(hash[:first]), net.IP(hash[first:second])}, nil
+	addrs := []net.IPAddr{{
+		IP:   net.IP(hash[:4]),
+		Zone: "somezone",
+	}, {
+		IP:   net.IP(hash[4:20]),
+		Zone: "somezone",
+	}}
+	return addrs, nil
 }
 
 func TestCheckHostSafeSearchGoogle(t *testing.T) {
@@ -274,9 +270,7 @@ func TestCheckHostSafeSearchGoogle(t *testing.T) {
 			res, err := d.CheckHost(host, dns.TypeA, &setts)
 			assert.Nil(t, err)
 			assert.True(t, res.IsFiltered)
-			if assert.Len(t, res.Rules, 1) {
-				assert.NotEqual(t, res.Rules[0].IP.String(), "0.0.0.0")
-			}
+			assert.Len(t, res.Rules, 1)
 		})
 	}
 }
@@ -332,15 +326,15 @@ func TestSafeSearchCacheGoogle(t *testing.T) {
 	safeDomain, ok := d.SafeSearchDomain(domain)
 	assert.Truef(t, ok, "Failed to get safesearch domain for %s", domain)
 
-	ips, err := resolver.LookupIP(context.Background(), "ip4", safeDomain)
+	ipAddrs, err := resolver.LookupIPAddr(context.Background(), safeDomain)
 	if err != nil {
 		t.Fatalf("Failed to lookup for %s", safeDomain)
 	}
 
-	ip := ips[0]
-	for _, i := range ips {
-		if i.To4() != nil {
-			ip = i
+	ip := ipAddrs[0].IP
+	for _, ipAddr := range ipAddrs {
+		if ipAddr.IP.To4() != nil {
+			ip = ipAddr.IP
 			break
 		}
 	}

@@ -94,7 +94,7 @@ type filtersInitializerParams struct {
 
 // Resolver is the interface for net.Resolver to simplify testing.
 type Resolver interface {
-	LookupIP(ctx context.Context, network, host string) (ips []net.IP, err error)
+	LookupIPAddr(ctx context.Context, host string) (ips []net.IPAddr, err error)
 }
 
 // DNSFilter matches hostnames and DNS requests against filtering rules.
